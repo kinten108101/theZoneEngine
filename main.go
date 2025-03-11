@@ -4,8 +4,12 @@ import (
 	"log"
 	"net/http"
 	"thezone/engine/lib/php"
+	"runtime"
 )
 func handleRoot(response http.ResponseWriter, request *http.Request) {
+	if runtime.GOOS == "windows" {
+		log.Fatalf("This route isn't supported on Windows. Panicking...")
+	}
 	// Đừng cười t vì sao phải gọi php từ cli, chẳng có thư viện go nào dùng đc
 	healthOutput, error := php.Exec("health.php")
 	if error != nil {
