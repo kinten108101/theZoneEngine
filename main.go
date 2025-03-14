@@ -13,7 +13,6 @@ import (
 )
 type Day struct{
 	list []Event 
-	Diary string
 	event string
 }
 type Month struct{
@@ -26,8 +25,7 @@ type Event struct {
 	Date        string `json:"date"`
 	Time        string `json:"time,omitempty"`
 	Description string `json:"description,omitempty"`
-	Noti        string `json:"noti,omitempty"`
-	type Type
+	static bool
 }
 
 func initDB() {
@@ -110,7 +108,7 @@ func getDayViewEvents(w http.ResponseWriter, date string) {
 	json.NewEncoder(w).Encode(events)
 }
 
-// Create an event (POST)
+
 func createEvent(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(r.Body)
 	defer r.Body.Close()
