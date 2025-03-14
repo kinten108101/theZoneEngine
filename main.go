@@ -186,8 +186,8 @@ func main() {
 	}
 	fmt.Fprintf(response, healthOutput)
 	
-	http.HandleFunc("/events", getEvents)     
-	http.HandleFunc("/event/create", createEvent)
+	http.HandleFunc("/events/view", getEvents)     
+	http.HandleFunc("/event/add", createEvent)
 	http.HandleFunc("/event/update", updateEvent)
 	http.HandleFunc("/event/delete", deleteEvent)
 

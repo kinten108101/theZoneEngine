@@ -1,2 +1,4 @@
-/events/
-/event/create
+/events/view   
+/event/add
+/event/update 
+/event/delete
