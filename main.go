@@ -182,7 +182,12 @@ func main() {
 		}
 		fmt.Fprintln(w, "The Zone API is running 🚀")
 	})
-
+	healthOutput, error := php.Exec("health.php")
+	if error != nil {
+		log.Fatal(error)
+	}
+	fmt.Fprintf(response, healthOutput)
+	
 	http.HandleFunc("/events", getEvents)     
 	http.HandleFunc("/event/create", createEvent)
 	http.HandleFunc("/event/update", updateEvent)
