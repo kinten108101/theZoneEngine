@@ -2,4 +2,9 @@ module thezone/engine
 
 go 1.22.9
 
-require github.com/deuill/go-php v0.0.0-20181001205857-9d111e73423d // indirect
+require (
+	github.com/go-sql-driver/mysql v1.8.1
+	github.com/joho/godotenv v1.5.1
+)
+
+require filippo.io/edwards25519 v1.1.0 // indirect

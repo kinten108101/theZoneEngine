@@ -108,6 +108,8 @@ class GeneticScheduler:
                      + max(min(parse_time("01:00"),sleep_time - self.latest_sleep), 0)*2 
                      + max(sleep_time - parse_time("01:00") - self.latest_sleep,0))
     
+
+    
     def generate_population(self):
         population = []
         for _ in range(self.population_size):

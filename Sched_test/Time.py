@@ -13,7 +13,7 @@ class Event():
         self.title = title
         self.start_time = start_time
         self.end_time = end_time
-        self.Dyna = None
+        self.Dyna = Dyna
         self.duration = duration if duration else end_time - start_time
 
     def __str__(self):
