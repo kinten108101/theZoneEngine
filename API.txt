@@ -1,4 +1,7 @@
-/events/view   
+/events/read   
 /event/add
-/event/update 
+/event/update/:id 
 /event/delete
+
+
+/events/read/month/day/:id

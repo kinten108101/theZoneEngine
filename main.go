@@ -176,7 +176,6 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Database query for events
 	rows, err := db.Query("SELECT id, title, date, time, description FROM events")
 	if err != nil {
 		http.Error(w, "Failed to fetch events", http.StatusInternalServerError)
@@ -223,7 +222,7 @@ func deleteEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if useMockData {
-		// In mock mode, return a success message
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -284,14 +283,12 @@ func updateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if useMockData {
-		// In mock mode, return a success message
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(e)
 		return
 	}
 
-	// Database update
 	result, err := db.Exec("UPDATE events SET title=?, date=?, start_time=?, end_time=?, description=? WHERE id=?", 
 		e.Title, e.Date, e.start_time, e.end_time, e.Description, e.ID)
 	if err != nil {
