@@ -1,7 +1,6 @@
-/events/read   
-/event/add
-/event/update/:id 
-/event/delete
+GET /event?(month || day)
+POST /event/
+PUT /event/:id 
+DELETE /event/
 
 
-/events/read/month/day/:id

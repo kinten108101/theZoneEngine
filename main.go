@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 	"net/http"
 	"os"
 	"strings"
-	"os/exec"
-
+	"thezone/engine/lib/php"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 )
@@ -26,7 +26,8 @@ type Event struct {
 }
 
 type Day struct {
-	Events []Event `json:"events"`
+	Date   string  `json:"date,omitempty"`  
+	Events []Event `json:"events,omitempty"`
 	Diary  string  `json:"diary,omitempty"`
 }
 
@@ -119,15 +120,13 @@ func createEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Database insertion
-	result, err := db.Exec("INSERT INTO events (title, date, start_time, end_time, description) VALUES (?, ?, ?, ?)", 
+	result, err := db.Exec("INSERT INTO events (title, date, start_time, end_time, description) VALUES (?, ?, ?, ?, ?)", 
 		e.Title, e.Date, e.start_time, e.end_time , e.Description)
 	if err != nil {
 		http.Error(w, "Failed to create event", http.StatusInternalServerError)
 		return
 	}
 
-	// Get the ID of the newly inserted event
 	id, err := result.LastInsertId()
 	if err != nil {
 		http.Error(w, "Failed to retrieve event ID", http.StatusInternalServerError)
@@ -141,61 +140,113 @@ func createEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func readEvents(w http.ResponseWriter, r *http.Request) {
-	
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	if useMockData {
-		// Return constant mock data
-		mockEvents := []Event{
-			{
-				ID:          1,
-				Title:       "Mock Event 1",
-				Date:        "28 -03- 2024",
-				start_time:        "10:00",
-				end_time: "12:00",
-				Description: "This is a mock event for demonstration",
-				// Dyna:      false,
-			},
-			{
-				ID:          2,
-				Title:       "Mock Event 2",
-				Date:        "09-11-2011",
-				start_time:        "10:00",
-				end_time: "12:00",
-				Description: "This is a mock event for demonstration",
-				// Dyna:      false,
-			},
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(mockEvents)
-		return
-	}
-
-	rows, err := db.Query("SELECT id, title, date, time, description FROM events")
-	if err != nil {
-		http.Error(w, "Failed to fetch events", http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	var events []Event
-	for rows.Next() {
-		var e Event
-		if err := rows.Scan(&e.ID, &e.Title, &e.Date, &e.start_time, &e.end_time, &e.Description); err != nil {
-			http.Error(w, "Failed to scan event", http.StatusInternalServerError)
-			return
-		}
-		events = append(events, e)
+	query := r.URL.Query()
+	month := query.Get("month")
+	day := query.Get("day")
+	if month == "" && day == "" {
+		day = time.Now().Format("02-01-2006")
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(events)
+
+	if useMockData {
+		if month != "" {
+			mockMonth := Month{
+				Days: []Day{
+					{Date: "01-" + month + "-2024"},
+					{Date: "02-" + month + "-2024"},
+				},
+				Objective: "Mock objective for month",
+			}
+			json.NewEncoder(w).Encode(mockMonth)
+			return
+		}
+		if day != "" {
+			mockDay := Day{
+				Events: []Event{
+					{
+						ID:          99,
+						Title:       "Mock Event for Day",
+						Date:        day,
+						start_time:  "09:00",
+						end_time:    "10:00",
+						Description: "Mocked event details",
+					},
+				},
+				Diary: "This is a mock diary entry.",
+			}
+			json.NewEncoder(w).Encode(mockDay)
+			return
+		}
+	}
+
+	// ---- REAL DATABASE HANDLING ----
+	if month != "" {
+		var objective string
+		err := db.QueryRow("SELECT objective FROM months WHERE month = ?", month).Scan(&objective)
+		if err != nil && err != sql.ErrNoRows {
+			http.Error(w, "Error fetching month", http.StatusInternalServerError)
+			return
+		}
+
+		rows, err := db.Query("SELECT date, diary FROM days WHERE SUBSTR(date, 4, 2) = ?", month)
+		if err != nil {
+			http.Error(w, "Error fetching days for month", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		var days []Day
+		for rows.Next() {
+			var d Day
+			if err := rows.Scan(&d.Date, &d.Diary); err != nil {
+				http.Error(w, "Failed to scan day", http.StatusInternalServerError)
+				return
+			}
+			days = append(days, d)
+		}
+
+		monthData := Month{
+			Days:      days,
+			Objective: objective,
+		}
+		json.NewEncoder(w).Encode(monthData)
+		return
+	}
+
+	if day != "" {
+		var diary string
+		_ = db.QueryRow("SELECT diary FROM days WHERE date = ?", day).Scan(&diary)
+
+		rows, err := db.Query("SELECT id, title, date, start_time, end_time, description FROM events WHERE date = ?", day)
+		if err != nil {
+			http.Error(w, "Error fetching events for day", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		var events []Event
+		for rows.Next() {
+			var e Event
+			if err := rows.Scan(&e.ID, &e.Title, &e.Date, &e.start_time, &e.end_time, &e.Description); err != nil {
+				http.Error(w, "Failed to scan event", http.StatusInternalServerError)
+				return
+			}
+			events = append(events, e)
+		}
+
+		dayData := Day{
+			Events: events,
+			Diary:  diary,
+		}
+		json.NewEncoder(w).Encode(dayData)
+		return
+	}
 }
 
 
@@ -312,17 +363,17 @@ func updateEvent(w http.ResponseWriter, r *http.Request) {
 		"message": "Event updated successfully",
 	})
 }
-func health() {
-	cmd := exec.Command("php", "health.php")
-	output, err := cmd.CombinedOutput()
+func handleRoot(response http.ResponseWriter, request *http.Request)() {
+	output, err := php.Exec("health.php")
 	if err != nil {
 		log.Println("Health check failed: %v\nOutput: %s", err, output)
-	}
+	} else {
 	log.Println("I dont know what does it do, but it works:", string(output))
+	}
+	fmt.Fprintf(response, output)
 }
 
 func main() {
-	health()
 	initDB()
 	defer func() {
 		if db != nil {
@@ -330,10 +381,10 @@ func main() {
 		}
 	}()
 
-	// Create a new serve mux
-	mux := http.NewServeMux()
-
 	// Register routes with middleware
+	mux := http.NewServeMux()
+	mux.HandleFunc("/",corsMiddleware(loggingMiddleware(handleRoot)))
+
 	mux.HandleFunc("/event/create", corsMiddleware(loggingMiddleware(createEvent)))
 	mux.HandleFunc("/event/read", corsMiddleware(loggingMiddleware(readEvents)))
 	mux.HandleFunc("/event/delete", corsMiddleware(loggingMiddleware(deleteEvent)))
@@ -341,11 +392,11 @@ func main() {
 
 	// Configure server
 	server := &http.Server{
-		Addr:    ":6969",
+		Addr:    ":8089",
 		Handler: mux,
 	}
 
 	// Start server
-	log.Println("Server is running on http://localhost:6969")
+	log.Println("Server is running on http://localhost:8089")
 	log.Fatal(server.ListenAndServe())
 }

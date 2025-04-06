@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from Time import *
 from helpfunc import *
 
-class GeneticScheduler:
+class Scheduler:
     def __init__(self,  sleep_time, latest_sleep, sleep_du, lunch_du):
         self.sched = []
         self.free_slots = []
@@ -36,20 +36,25 @@ class GeneticScheduler:
 
         self.free_slots = free_slots
     
-    def is_overlapping(self, new_event):
-        for event in self.sched:
-            if event.Dyna == None and not (new_event.end_time <= event.start_time or new_event.start_time >= event.end_time):
-                return True
-        return False
-    
+    def create(self, title, start_time, end_time, is_static):
+        event = Event(title, start_time, end_time) if is_static else Dynamax(title, start_time, end_time)
+        self.add_event(event)
+
     def add_event(self, e):
         if isinstance(e, Event):
-            if self.is_overlapping(e):
-                response = input("Warning: The event has an overlapping timeline with an existing static event.\nDo you want to proceed? (yes/no): ")
-                if response.lower()[0] != 'y':
-                    print("Event was not added.")
-                    return
-            self.sched.append(e)
+            if e.start_time >= e.end_time:
+                print("This event time is invalid")
+            idx = None
+            for i, event in enumerate(self.sched):
+                if event.Dyna == None and not (e.end_time <= event.start_time or e.start_time >= event.end_time):
+                    response = input("Warning: The event has an overlapping timeline with an existing static event.\nDo you want to proceed? (yes/no): ")
+                    if response.lower()[0] != 'y':
+                        print("Event was not added.")
+                        return
+                if idx is None and e.start_time < event.start_time:
+                    idx = i
+                    break
+            self.sched.insert(idx,e)
             print("Static Event added successfully.")
         elif isinstance(e, Dynamax):
             print("Invalid event.")

@@ -14,7 +14,7 @@ def main():
     latest_sleep = parse_time(normalize_time_input(input("Latest sleeping time: ")))
     sleep_du = input("How long do you want to sleep: ")
     lunch_du = input("How long do you want to break during lunch time: ")
-    sched = GeneticScheduler(sleep_time,latest_sleep,sleep_du,lunch_du)
+    sched = Scheduler(sleep_time,latest_sleep,sleep_du,lunch_du)
     while True:
         print("Menu")
         print("1. Add events")
