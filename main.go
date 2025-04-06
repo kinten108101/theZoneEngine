@@ -120,7 +120,7 @@ func createEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := db.Exec("INSERT INTO events (title, date, start_time, end_time, description) VALUES (?, ?, ?, ?, ?)", 
+	result, err := db.Exec("INSERT INTO task (title, dt, start_time, end_time, des) VALUES (?, ?, ?, ?, ?)", 
 		e.Title, e.Date, e.start_time, e.end_time , e.Description)
 	if err != nil {
 		http.Error(w, "Failed to create event", http.StatusInternalServerError)
@@ -148,6 +148,7 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	month := query.Get("month")
 	day := query.Get("day")
+	var year = time.Now().Year()
 	if month == "" && day == "" {
 		day = time.Now().Format("02-01-2006")
 	}
@@ -188,13 +189,13 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 	// ---- REAL DATABASE HANDLING ----
 	if month != "" {
 		var objective string
-		err := db.QueryRow("SELECT objective FROM months WHERE month = ?", month).Scan(&objective)
+		err := db.QueryRow("SELECT objective FROM months WHERE M = ? and Y = ?", month, year).Scan(&objective)
 		if err != nil && err != sql.ErrNoRows {
 			http.Error(w, "Error fetching month", http.StatusInternalServerError)
 			return
 		}
 
-		rows, err := db.Query("SELECT date, diary FROM days WHERE SUBSTR(date, 4, 2) = ?", month)
+		rows, err := db.Query("SELECT dt, diary FROM days WHERE M = ? and Y = ?", month,year)
 		if err != nil {
 			http.Error(w, "Error fetching days for month", http.StatusInternalServerError)
 			return
@@ -221,9 +222,9 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 
 	if day != "" {
 		var diary string
-		_ = db.QueryRow("SELECT diary FROM days WHERE date = ?", day).Scan(&diary)
+		_ = db.QueryRow("SELECT diary FROM days WHERE dt = ?", day).Scan(&diary)
 
-		rows, err := db.Query("SELECT id, title, date, start_time, end_time, description FROM events WHERE date = ?", day)
+		rows, err := db.Query("SELECT id, title, dt, start_time, end_time, des FROM task WHERE M = ? and Y = ? and dt = ?", day)
 		if err != nil {
 			http.Error(w, "Error fetching events for day", http.StatusInternalServerError)
 			return
@@ -283,7 +284,7 @@ func deleteEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Database deletion
-	result, err := db.Exec("DELETE FROM events WHERE id = ?", id)
+	result, err := db.Exec("DELETE FROM task WHERE id = ?", id)
 	if err != nil {
 		http.Error(w, "Failed to delete event", http.StatusInternalServerError)
 		return
@@ -340,7 +341,7 @@ func updateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := db.Exec("UPDATE events SET title=?, date=?, start_time=?, end_time=?, description=? WHERE id=?", 
+	result, err := db.Exec("UPDATE task SET title=?, dt=?, start_time=?, end_time=?, des=? WHERE id=?", 
 		e.Title, e.Date, e.start_time, e.end_time, e.Description, e.ID)
 	if err != nil {
 		http.Error(w, "Failed to update event", http.StatusInternalServerError)
@@ -372,7 +373,20 @@ func handleRoot(response http.ResponseWriter, request *http.Request)() {
 	}
 	fmt.Fprintf(response, output)
 }
-
+func eventRouter(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		readEvents(w, r)
+	case http.MethodPost:
+		createEvent(w, r)
+	case http.MethodPut:
+		updateEvent(w, r)
+	case http.MethodDelete:
+		deleteEvent(w, r)
+	default:
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	}
+}
 func main() {
 	initDB()
 	defer func() {
@@ -384,12 +398,7 @@ func main() {
 	// Register routes with middleware
 	mux := http.NewServeMux()
 	mux.HandleFunc("/",corsMiddleware(loggingMiddleware(handleRoot)))
-
-	mux.HandleFunc("/event/create", corsMiddleware(loggingMiddleware(createEvent)))
-	mux.HandleFunc("/event/read", corsMiddleware(loggingMiddleware(readEvents)))
-	mux.HandleFunc("/event/delete", corsMiddleware(loggingMiddleware(deleteEvent)))
-	mux.HandleFunc("/event/update", corsMiddleware(loggingMiddleware(updateEvent)))
-
+	mux.HandleFunc("/event", corsMiddleware(loggingMiddleware(eventRouter)))
 	// Configure server
 	server := &http.Server{
 		Addr:    ":8089",

@@ -1,4 +1,4 @@
-GET /event?(month || day)
+GET /event/?(month | day)
 POST /event/
 PUT /event/:id 
 DELETE /event/
