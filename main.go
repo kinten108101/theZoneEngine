@@ -156,7 +156,7 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 	day := query.Get("day")
 	var year = time.Now().Year()
 	if month == "" && day == "" {
-		day = time.Now().Format("02-01-2006")
+		day = time.Now().Format("2025-04-07")
 	}
 
 	w.Header().Set("Content-Type", "application/json")
