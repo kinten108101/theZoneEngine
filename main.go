@@ -18,26 +18,26 @@ import (
 )
 
 type Event struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	Date        string `json:"date"`
-	EndDate	 string `json:"end_date,omitempty"`
-	StartTime        string `json:"start_time,omitempty"`
-	EndTime        string `json:"end_time,omitempty"`
-	Description string `json:"description,omitempty"`
-	Dyna      int   `json:"FK,omitempty"`
-	Duration float32 `json:"dur,omitempty"`
+	ID          int     `json:"id"`
+	Title       string  `json:"title"`
+	Date        string  `json:"date"`
+	EndDate	    string  `json:"end_date,omitempty"`
+	StartTime   string  `json:"start_time,omitempty"`
+	EndTime     string  `json:"end_time,omitempty"`
+	Description string  `json:"description,omitempty"`
+	Dyna        int     `json:"FK,omitempty"`
+	Duration    float32 `json:"dur,omitempty"`
 }
 
 type Day struct {
-	Date   string  `json:"date,omitempty"`  
-	Events []Event `json:"events,omitempty"`
-	Diary  string  `json:"diary,omitempty"`
+	Date        string  `json:"date,omitempty"`  
+	Events      []Event `json:"events,omitempty"`
+	Diary       string  `json:"diary,omitempty"`
 }
 
 type Month struct {
-	Days      []Day  `json:"days"`
-	Objective string `json:"objective,omitempty"`
+	Days        []Day   `json:"days"`
+	Objective   string  `json:"objective,omitempty"`
 }
 
 var db *sql.DB
@@ -96,7 +96,6 @@ func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func createEvent(w http.ResponseWriter, r *http.Request) {
-	
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -107,6 +106,7 @@ func createEvent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
 		return
 	}
+
 	defer r.Body.Close()
 
 	var e Event
@@ -168,10 +168,10 @@ func createEvent(w http.ResponseWriter, r *http.Request) {
 
 	for _, jsonLine := range jsonLines {
 		var event struct {
-			Title     string `json:"title"`
-			Date      string `json:"date"`
-			StartTime string `json:"start_time"`
-			EndTime   string `json:"end_time"`
+			Title       string `json:"title"`
+			Date        string `json:"date"`
+			StartTime   string `json:"start_time"`
+			EndTime     string `json:"end_time"`
 			Description string `json:"description"`
 		}
 
@@ -224,6 +224,7 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(mockMonth)
 			return
 		}
+
 		if day != "" {
 			mockDay := Day{
 				Events: []Event{
@@ -231,8 +232,8 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 						ID:          99,
 						Title:       "Mock Event for Day",
 						Date:        day,
-						StartTime:  "09:00",
-						EndTime:    "10:00",
+						StartTime:   "09:00",
+						EndTime:     "10:00",
 						Description: "Mocked event details",
 					},
 				},
@@ -289,6 +290,7 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error fetching events for day", http.StatusInternalServerError)
 			return
 		}
+
 		defer rows.Close()
 
 		var events []Event
@@ -311,9 +313,7 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 func deleteEvent(w http.ResponseWriter, r *http.Request) {
-	
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -425,6 +425,7 @@ func updateEvent(w http.ResponseWriter, r *http.Request) {
 		"message": "Event updated successfully",
 	})
 }
+
 func handleRoot(response http.ResponseWriter, request *http.Request)() {
 	output, err := php.Exec("health.php")
 	if err != nil {
@@ -434,6 +435,7 @@ func handleRoot(response http.ResponseWriter, request *http.Request)() {
 	}
 	fmt.Fprintf(response, output)
 }
+
 func eventRouter(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -448,6 +450,7 @@ func eventRouter(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 	}
 }
+
 func main() {
 	initDB()
 	defer func() {
