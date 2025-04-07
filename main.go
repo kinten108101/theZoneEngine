@@ -209,9 +209,10 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Failed to scan day", http.StatusInternalServerError)
 				return
 			}
+			log.Println("Fetched day:", d.Date)
 			days = append(days, d)
 		}
-
+		
 		monthData := Month{
 			Days:      days,
 			Objective: objective,
@@ -221,11 +222,13 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if day != "" {
+		day, err := time.Parse("2006-01-02", day)
 		var diary string
 		_ = db.QueryRow("SELECT diary FROM days WHERE dt = ?", day).Scan(&diary)
 
-		rows, err := db.Query("SELECT id, title, dt, start_time, end_time, des FROM task WHERE M = ? and Y = ? and dt = ?", day)
+		rows, err := db.Query("SELECT id, title, dt, start_time, end_time, des FROM task WHERE dt = ?", day)
 		if err != nil {
+			log.Println("Day fetching error", err)
 			http.Error(w, "Error fetching events for day", http.StatusInternalServerError)
 			return
 		}
@@ -238,6 +241,7 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Failed to scan event", http.StatusInternalServerError)
 				return
 			}
+			log.Println("Event Title:", e.Title)
 			events = append(events, e)
 		}
 
