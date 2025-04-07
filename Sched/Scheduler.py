@@ -12,7 +12,33 @@ from mysql.connector.cursor import MySQLCursorDict
 import re
 
 class Scheduler:
-    def sync(self, start_date, end_date):
+    def insert_events_into_db(self, events):
+        cursor = self.db.cursor()
+
+        insert_query = """
+            INSERT INTO task (title, dt, start_time, end_time, des) 
+            VALUES (%s, %s, %s, %s, %s)
+        """
+
+        inserted_ids = []
+
+        for ev in events:
+            cursor.execute(insert_query, (
+                ev.title,
+                ev.date,
+                ev.start_time.strftime("%H:%M"),
+                ev.end_time.strftime("%H:%M"),
+                ev.description
+            ))
+            inserted_ids.append(cursor.lastrowid)
+
+        self.db.commit()
+        cursor.close()
+
+        return inserted_ids
+    
+
+    def sync(self, start_date : str, end_date : str):
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         days_range = [
@@ -31,10 +57,9 @@ class Scheduler:
                 self.create(
                     row["title"],
                     row["dt"],
-                    parse_time(row["start_time"]),
-                    parse_time(row["end_time"]),
-                    description=row["des"],
-                    id=row["id"],
+                    row["start_time"],
+                    row["end_time"],
+                    des=row["des"],
                     is_static=True
                 )
 
@@ -70,28 +95,24 @@ class Scheduler:
         d = self.month.get_day(e.date)
         for existing in d.events:
             if existing.Dyna is None and not (e.end_time <= existing.start_time or e.start_time >= existing.end_time):
-                response = input(f"{e.date} overlap with a static event. Proceed? (yes/no): ")
-                if response.lower()[0] != 'y':
-                    print("Event was not added.")
-                    return
+                print("Event is overlapped.")
         d.events.append(e)
         d.events.sort(key=lambda ev: ev.start_time)
         print("Event added.")
 
-    def create(self, title, date, start_time, end_time, duration=None,end_date = None, is_static=True):
-        start_time = parse_time(start_time)
-        end_time = parse_time(end_time)
-
+    def create(self, title, date, start_time, end_time,des = "", duration=None,end_date = None, is_static=True):
+        events = None
         if is_static:
-            e = Event( title, date, start_time, end_time)
-            self.add_event(e)
+            events = [Event( title, date, start_time, end_time, des)]
+            self.add_event(events[0])
         else:
-            dyna = Dynamax(title, start_time, end_time, duration)
-            success = self.autoCalendar(dyna, date, end_date)
+            dyna = Dynamax(title, start_time, end_time, duration,des)
+            success, events = self.autoCalendar(dyna, date, end_date)
             if success:
                 print("Dynamic Event added.")
             else:
                 print("Failed to schedule Dynamic Event.")
+        return events
 
     def get_free_slots(self, date):
         d = self.month.get_day(date)
@@ -140,7 +161,7 @@ class Scheduler:
 
     def autoCalendar(self, dyna, start_date, end_date):
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d") if end_date else start_dt
         days_range = [(start_dt + timedelta(days=i)).strftime("%Y-%m-%d") 
                     for i in range((end_dt - start_dt).days + 1)]
 
@@ -150,8 +171,8 @@ class Scheduler:
         for e in best_sched:
             self.month.get_day(e.date).events.append(e)
             self.month.get_day(e.date).events.sort(key=lambda x: x.start_time)
-
-        return True
+        print(best_sched)
+        return True, best_sched
 
     def generate_sched(self, dyna, day_events, days_range):
         candidates = []

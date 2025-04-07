@@ -9,7 +9,9 @@ import (
 	"time"
 	"net/http"
 	"os"
+	"bytes"
 	"strings"
+	"os/exec"
 	"thezone/engine/lib/php"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -19,10 +21,12 @@ type Event struct {
 	ID          int    `json:"id"`
 	Title       string `json:"title"`
 	Date        string `json:"date"`
-	StartTime        string `json:"start_time"`
-	EndTime        string `json:"end_time"`
+	EndDate	 string `json:"end_date,omitempty"`
+	StartTime        string `json:"start_time,omitempty"`
+	EndTime        string `json:"end_time,omitempty"`
 	Description string `json:"description,omitempty"`
-	Dyna      int   `json:"fk_id,omitempty"`
+	Dyna      int   `json:"FK,omitempty"`
+	Duration float32 `json:"dur,omitempty"`
 }
 
 type Day struct {
@@ -110,39 +114,86 @@ func createEvent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-
-	// stdout, err := os.Exec({ "python", "Sched/op.py", "--data", json.Marshall(e) })
-	// response := json.Unmarshal(stdout)
-	// e.start_time = response.start_time
-	// e.end_time = response.end_time
-	// ...
-
-	if useMockData {
-		// In mock mode, return the event details back to the user
-		e.ID = 999 // Mock ID
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(e)
-		return
-	}
-
-	result, err := db.Exec("INSERT INTO task (title, dt, start_time, end_time, des) VALUES (?, ?, ?, ?, ?)", 
-		e.Title, e.Date, e.StartTime, e.EndTime , e.Description)
+	fmt.Printf("Received event: %+v\n", e)
+	jsonData, err := json.Marshal(e)
 	if err != nil {
-		http.Error(w, "Failed to create event", http.StatusInternalServerError)
+		http.Error(w, "Failed to marshal event", http.StatusInternalServerError)
 		return
 	}
-
-	id, err := result.LastInsertId()
+	cmd := exec.Command("python3", "Sched/op.py", "--data", string(jsonData))
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	
+	err = cmd.Run()
 	if err != nil {
-		http.Error(w, "Failed to retrieve event ID", http.StatusInternalServerError)
+		log.Println("Python script failed:", err)
+		log.Println("stderr:", stderr.String()) // prints error output from Python
+		http.Error(w, "Python script failed: "+stderr.String(), http.StatusInternalServerError)
+		return
+	}
+	
+	log.Println("stdout:", out.String())
+		
+	// Split the output into lines
+	outputLines := strings.Split(out.String(), "\n")
+
+	var jsonLines []string
+	for _, line := range outputLines {
+		// Check if the line contains a valid JSON object (i.e., contains '{' and '}')
+		if strings.Contains(line, "{") && strings.Contains(line, "}") {
+			jsonLines = append(jsonLines, line)
+		}
+	}
+
+	// If no valid JSON lines found
+	if len(jsonLines) == 0 {
+		http.Error(w, "No valid JSON found in the Python output", http.StatusInternalServerError)
 		return
 	}
 
-	e.ID = int(id)
+	// Log all the found JSON lines
+	log.Println("Found JSON lines from Python output:", jsonLines)
+
+	// Now you can process all valid JSON lines
+	var events []struct {
+		Title     string `json:"title"`
+		Date      string `json:"date"`
+		StartTime string `json:"start_time"`
+		EndTime   string `json:"end_time"`
+		Description string `json:"description"`
+	}
+
+	for _, jsonLine := range jsonLines {
+		var event struct {
+			Title     string `json:"title"`
+			Date      string `json:"date"`
+			StartTime string `json:"start_time"`
+			EndTime   string `json:"end_time"`
+			Description string `json:"description"`
+		}
+
+		// Unmarshal each JSON line into the event struct
+		if err := json.Unmarshal([]byte(jsonLine), &event); err != nil {
+			http.Error(w, "Invalid JSON from Python: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Append to events slice
+		events = append(events, event)
+	}
+
+	// Optionally, return the events as a response
+	response, err := json.Marshal(events)
+	if err != nil {
+		http.Error(w, "Failed to marshal events: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(e)
+	w.Write(response)
 }
 
 func readEvents(w http.ResponseWriter, r *http.Request) {

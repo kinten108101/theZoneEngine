@@ -1,5 +1,29 @@
 GET /event/?(month | day)
-POST /event/
 PUT /event/:id 
 DELETE /event/:id
 
+POST /event/{
+
+}
+
+POST http://localhost:8080/event {
+    "title": "Study Session",
+    "date": "2025-04-07",
+    "start_time": "15:00",
+    "end_time": "16:00",
+    "description": "Hustle the Zone",
+    "fk_id": 1
+  }
+
+ POST http://localhost:8080/event {
+    "title": "Go gym",
+    "date": "2025-04-08",
+    "end_date": "2025-04-08",
+    "description": "Hustle the Zone",
+    "dur": 4,
+    "FK": 2
+  }
+  
+GET http://localhost:8080/event?day=2025-04-07
+
+DELETE http://localhost:8080/event?id=113

@@ -1,10 +1,13 @@
+import datetime
+
 class Dynamax():
-    def __init__(self, title, start_time, end_time, duration):
+    def __init__(self, title, start_time, end_time, duration, description=""):
         self.title = title
         self.start_time = start_time
         self.end_time = end_time
         self.list = []
         self.duration = duration
+        self.description = description
         
     def __str__(self):
         return f"Title: {self.title}, Start: {self.start_time.strftime('%H:%M')}, End: {self.end_time.strftime('%H:%M')}"
@@ -18,9 +21,17 @@ class Event:
         self.description = description
         self.Dyna = Dyna
         self.duration = end_time - start_time
+    def to_json(self):
+        return {
+            "title": self.title,
+            "date": self.date,
+            "start_time": self.start_time.strftime("%Y-%m-%d %H:%M:%S") ,
+            "end_time": self.end_time.strftime("%Y-%m-%d %H:%M:%S") ,
+            "description": self.description
+        }
 
     def __str__(self):
-        return f"{self.title} ({self.start_time.strftime('%H:%M')} - {self.end_time.strftime('%H:%M')})"
+        return f"{self.title} ({self.start_time} - {self.end_time})"
 
 class Day:
     def __init__(self, date):
