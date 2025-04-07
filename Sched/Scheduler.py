@@ -7,7 +7,8 @@ import sqlite3
 import os
 from dotenv import load_dotenv
 load_dotenv()
-import mysql.connector
+from mysql.connector import connect, Error
+from mysql.connector.cursor import MySQLCursorDict
 import re
 
 class Scheduler:
@@ -19,12 +20,11 @@ class Scheduler:
             for i in range((end_dt - start_dt).days + 1)
         ]
 
+        cursor = self.db.cursor(dictionary=True)  # Use dictionary cursor for MySQL
         for day in days_range:
-            self.month
-
-        cursor = self.db.cursor()
-        for day in days_range:
-            cursor.execute("SELECT id, title, dt, start_time, end_time, des FROM task WHERE dt = ?", (day,))
+            cursor.execute(
+                "SELECT id, title, dt, start_time, end_time, des FROM task WHERE dt = %s", (day,)
+            )
             rows = cursor.fetchall()
 
             for row in rows:
@@ -37,7 +37,8 @@ class Scheduler:
                     id=row["id"],
                     is_static=True
                 )
-        
+
+        cursor.close()
         return True
     
     def __init__(self, sleep_time, latest_sleep, wake, lunch_du):
@@ -51,7 +52,7 @@ class Scheduler:
 
         user, password, host, port, dbname = match.groups()
 
-        self.db = mysql.connector.connect(
+        self.db = connect(
             user=user,
             password=password,
             host=host,

@@ -26,7 +26,7 @@ def main():
     lunch_du = int(45)
 
     sched = Scheduler(sleep_time, latest_sleep, wake, lunch_du)
-
+    sched.
     while True:
         print("\nMenu")
         print("1. Add event")
