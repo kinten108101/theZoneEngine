@@ -5,6 +5,10 @@ from helpfunc import *
 from copy import deepcopy
 import sqlite3
 import os
+from dotenv import load_dotenv
+load_dotenv()
+import mysql.connector
+import re
 
 class Scheduler:
     def sync(self, start_date, end_date):
@@ -35,13 +39,25 @@ class Scheduler:
                 )
         
         return True
+    
     def __init__(self, sleep_time, latest_sleep, wake, lunch_du):
-        db_string = os.environ.get("DBstring")
+        db_string = os.getenv("DBstring")
         if not db_string:
             raise ValueError("Environment variable 'DBstring' is not set")
 
-        self.db = sqlite3.connect(db_string, uri=True)
-        self.db.row_factory = sqlite3.Row
+        match = re.match(r'(\w+):([^@]+)@tcp\(([^:]+):(\d+)\)/(\w+)', db_string)
+        if not match:
+            raise ValueError("Invalid DBstring format")
+
+        user, password, host, port, dbname = match.groups()
+
+        self.db = mysql.connector.connect(
+            user=user,
+            password=password,
+            host=host,
+            port=int(port),
+            database=dbname
+        )
         self.month = Month()
         self.free_slots = {}
         self.sleep_time = sleep_time

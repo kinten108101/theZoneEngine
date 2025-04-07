@@ -127,7 +127,7 @@ func createEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := db.Exec("INSERT INTO task (title, dt, start_time, end_time, des) VALUES (?, ?, ?, ?, ?)", 
-		e.Title, e.Date, e.start_time, e.end_time , e.Description)
+		e.Title, e.Date, e.StartTime, e.EndTime , e.Description)
 	if err != nil {
 		http.Error(w, "Failed to create event", http.StatusInternalServerError)
 		return
