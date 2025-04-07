@@ -111,6 +111,12 @@ func createEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// stdout, err := os.Exec({ "python", "Sched/op.py", "--data", json.Marshall(e) })
+	// response := json.Unmarshal(stdout)
+	// e.start_time = response.start_time
+	// e.end_time = response.end_time
+	// ...
+
 	if useMockData {
 		// In mock mode, return the event details back to the user
 		e.ID = 999 // Mock ID
