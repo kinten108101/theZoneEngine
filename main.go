@@ -411,11 +411,11 @@ func main() {
 	mux.HandleFunc("/event", corsMiddleware(loggingMiddleware(eventRouter)))
 	// Configure server
 	server := &http.Server{
-		Addr:    ":8089",
+		Addr:    ":8080",
 		Handler: mux,
 	}
 
 	// Start server
-	log.Println("Server is running on http://localhost:8089")
+	log.Println("Server is running on http://localhost:8080")
 	log.Fatal(server.ListenAndServe())
 }
