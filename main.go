@@ -19,8 +19,8 @@ type Event struct {
 	ID          int    `json:"id"`
 	Title       string `json:"title"`
 	Date        string `json:"date"`
-	start_time        string `json:"start_time"`
-	end_time        string `json:"end_time"`
+	StartTime        string `json:"start_time"`
+	EndTime        string `json:"end_time"`
 	Description string `json:"description,omitempty"`
 	Dyna      int   `json:"fk_id,omitempty"`
 }
@@ -180,8 +180,8 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 						ID:          99,
 						Title:       "Mock Event for Day",
 						Date:        day,
-						start_time:  "09:00",
-						end_time:    "10:00",
+						StartTime:  "09:00",
+						EndTime:    "10:00",
 						Description: "Mocked event details",
 					},
 				},
@@ -243,7 +243,7 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 		var events []Event
 		for rows.Next() {
 			var e Event
-			if err := rows.Scan(&e.ID, &e.Title, &e.Date, &e.start_time, &e.end_time, &e.Description); err != nil {
+			if err := rows.Scan(&e.ID, &e.Title, &e.Date, &e.StartTime, &e.EndTime, &e.Description); err != nil {
 				http.Error(w, "Failed to scan event", http.StatusInternalServerError)
 				return
 			}
@@ -352,7 +352,7 @@ func updateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := db.Exec("UPDATE task SET title=?, dt=?, start_time=?, end_time=?, des=? WHERE id=?", 
-		e.Title, e.Date, e.start_time, e.end_time, e.Description, e.ID)
+		e.Title, e.Date, e.StartTime, e.EndTime, e.Description, e.ID)
 	if err != nil {
 		http.Error(w, "Failed to update event", http.StatusInternalServerError)
 		return
