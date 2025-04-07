@@ -1,33 +1,5 @@
 GET /event/?(month | day)
 POST /event/
 PUT /event/:id 
-DELETE /event/
+DELETE /event/:id
 
-
-    def autoCalendar(self, dyna, start_date):
-        remaining = dyna.duration.total_seconds() // 60
-        min_block = 30
-        max_block = 180
-        result = {}
-        for i in range(7):
-            cur_date = (datetime.strptime(start_date, "%Y-%m-%d") + timedelta(days=i)).strftime("%Y-%m-%d")
-            self.get_free_slots(cur_date)
-            result[cur_date] = []
-            slots = [(parse_time(s), parse_time(e)) for s, e in self.free_slots[cur_date]]
-            for s, e in slots:
-                avail = (e - s).total_seconds() // 60
-                while avail >= min_block and remaining >= min_block:
-                    block = min(remaining, min(avail, max_block))
-                    self.event_id += 1
-                    new_event = Event(self.event_id, dyna.title, cur_date, s, s + timedelta(minutes=block), Dyna=dyna)
-                    result[cur_date].append(new_event)
-                    s += timedelta(minutes=block)
-                    avail -= block
-                    remaining -= block
-                    if remaining <= 0:
-                        break
-                if remaining <= 0:
-                    break
-            if remaining <= 0:
-                break
-        return True, result
