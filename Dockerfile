@@ -1,27 +1,28 @@
 # First stage: build the Go binary
 FROM golang:1.22.9 AS builder
 
+
+# Set the working directory inside the container
 WORKDIR /app
 
-COPY go.mod go.sum ./
+# Copy go files and download dependencies
+COPY go.mod ./
+COPY go.sum ./
 RUN go mod download
 
+# Copy the rest of the app code
 COPY . .
 
-# Build the Go binary statically
-RUN CGO_ENABLED=0 GOOS=linux go build -o server .
+# Build the Go binary
+RUN go build -o server
 
-# Second stage: run the binary in a lightweight container
-FROM alpine:latest
+# Use a minimal base image to run the binary
+FROM debian:bookworm-slim
+WORKDIR /app
+COPY --from=0 /app/server .
 
-WORKDIR /root/
-
-# Copy binary from builder
-COPY --from=builder /app/server .
-
-# Cloud Run expects the service to listen on $PORT
+# Set environment variable
 ENV PORT=8080
 
-EXPOSE 8080
-
+# Run the server
 CMD ["./server"]

@@ -3,9 +3,45 @@ from datetime import datetime, timedelta
 from Time import *
 from helpfunc import *
 from copy import deepcopy
+import sqlite3
+import os
 
 class Scheduler:
+    def sync(self, start_date, end_date):
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        days_range = [
+            (start_dt + timedelta(days=i)).strftime("%Y-%m-%d")
+            for i in range((end_dt - start_dt).days + 1)
+        ]
+
+        for day in days_range:
+            self.month
+
+        cursor = self.db.cursor()
+        for day in days_range:
+            cursor.execute("SELECT id, title, dt, start_time, end_time, des FROM task WHERE dt = ?", (day,))
+            rows = cursor.fetchall()
+
+            for row in rows:
+                self.create(
+                    row["title"],
+                    row["dt"],
+                    parse_time(row["start_time"]),
+                    parse_time(row["end_time"]),
+                    description=row["des"],
+                    id=row["id"],
+                    is_static=True
+                )
+        
+        return True
     def __init__(self, sleep_time, latest_sleep, wake, lunch_du):
+        db_string = os.environ.get("DBstring")
+        if not db_string:
+            raise ValueError("Environment variable 'DBstring' is not set")
+
+        self.db = sqlite3.connect(db_string, uri=True)
+        self.db.row_factory = sqlite3.Row
         self.month = Month()
         self.free_slots = {}
         self.sleep_time = sleep_time
