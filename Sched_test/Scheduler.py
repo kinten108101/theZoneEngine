@@ -8,7 +8,6 @@ class Scheduler:
     def __init__(self, sleep_time, latest_sleep, wake, lunch_du):
         self.month = Month()
         self.free_slots = {}
-        self.event_id = 0
         self.sleep_time = sleep_time
         self.latest_sleep = latest_sleep
         self.wake = wake
@@ -29,10 +28,9 @@ class Scheduler:
     def create(self, title, date, start_time, end_time, duration=None,end_date = None, is_static=True):
         start_time = parse_time(start_time)
         end_time = parse_time(end_time)
-        self.event_id += 1
 
         if is_static:
-            e = Event(self.event_id, title, date, start_time, end_time)
+            e = Event( title, date, start_time, end_time)
             self.add_event(e)
         else:
             dyna = Dynamax(title, start_time, end_time, duration)
@@ -138,7 +136,6 @@ class Scheduler:
                         time_per_day = dur_left / len(selected_days)
                     continue
 
-                day_events_sorted = sorted(temp_day_events[day], key=lambda e: e.start_time)
 
                 # Check for gaps and split events if needed
                 for start, end in available:
@@ -153,13 +150,12 @@ class Scheduler:
 
                     block_td = timedelta(minutes=block_size)
                     end_time = start + block_td
-                    self.event_id += 1
 
                     # Calculate the perfect middle of the slot
                     mid_point = start + timedelta(minutes=(block_size // 2))
 
                     # Create event with adjusted start time to be in the middle of the available slot
-                    e = Event(self.event_id, dyna.title, day, mid_point, end_time)
+                    e = Event(dyna.title, day, mid_point, end_time,"",dyna)
                     sched.append(e)
 
                     temp_day_events[day].append(e)

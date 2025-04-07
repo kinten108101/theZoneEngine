@@ -10,10 +10,9 @@ class Dynamax():
         return f"Title: {self.title}, Start: {self.start_time.strftime('%H:%M')}, End: {self.end_time.strftime('%H:%M')}"
     
 class Event:
-    def __init__(self, ID, title, date, start_time, end_time, description="", Dyna=None):
-        self.ID = ID
+    def __init__(self, title, date, start_time, end_time, description="", Dyna=None):
         self.title = title
-        self.date = date  # "YYYY-MM-DD"
+        self.date = date  
         self.start_time = start_time
         self.end_time = end_time
         self.description = description
