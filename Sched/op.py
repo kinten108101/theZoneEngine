@@ -6,8 +6,7 @@ from helpfunc import *
 import argparse
 import json
 
-
-def main():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str, required=True)
     args = parser.parse_args()
@@ -37,12 +36,14 @@ def main():
     # def create(self, title, date, start_time, end_time,des = "", duration=None,end_date = None, is_static=True):
     end_date = None
     duration = None
+
     if not is_static:
         end_date = event["end_date"]
         duration = timedelta(hours=event["dur"])
     else:
         start = parse_time(normalize_time_input(event["start_time"]))
         end = parse_time(normalize_time_input(event["end_time"]))
+
     created_event = sched.create(
         title=title,
         date=date,
@@ -53,11 +54,9 @@ def main():
         des=des,
         is_static=is_static
     )
+
     sched.insert_events_into_db(created_event)
+
     for e in created_event:
         print(json.dumps(e.to_json()))
 
-
-
-if __name__ == "__main__":
-    main()
