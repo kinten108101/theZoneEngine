@@ -195,22 +195,10 @@ func createEvent(w http.ResponseWriter, r *http.Request) {
 	log.Println("Found JSON lines from Python output:", jsonLines)
 
 
-	var events []struct {
-		Title     string `json:"title"`
-		Date      string `json:"date"`
-		StartTime string `json:"start_time"`
-		EndTime   string `json:"end_time"`
-		Description string `json:"description"`
-	}
+	var events []Event
 
 	for _, jsonLine := range jsonLines {
-		var event struct {
-			Title       string `json:"title"`
-			Date        string `json:"date"`
-			StartTime   string `json:"start_time"`
-			EndTime     string `json:"end_time"`
-			Description string `json:"description"`
-		}
+		var event Event
 
 		// Unmarshal each JSON line into the event struct
 		if err := json.Unmarshal([]byte(jsonLine), &event); err != nil {

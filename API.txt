@@ -16,7 +16,7 @@ POST http://localhost:8080/event {
   }
 
  POST http://localhost:8080/event {
-    "title": "Go gym",
+    "title": "Go Coding",
     "date": "2025-04-08",
     "end_date": "2025-04-08",
     "description": "Hustle the Zone",

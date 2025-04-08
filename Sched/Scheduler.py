@@ -20,7 +20,7 @@ class Scheduler:
             VALUES (%s, %s, %s, %s, %s)
         """
 
-        inserted_ids = []
+
 
         for ev in events:
             cursor.execute(insert_query, (
@@ -30,12 +30,11 @@ class Scheduler:
                 ev.end_time.strftime("%H:%M"),
                 ev.description
             ))
-            inserted_ids.append(cursor.lastrowid)
+            ev.id=cursor.lastrowid
 
         self.db.commit()
         cursor.close()
 
-        return inserted_ids
     
 
     def sync(self, start_date : str, end_date : str):
@@ -91,14 +90,17 @@ class Scheduler:
         self.wake = wake
         self.lunch_du = lunch_du
 
-    def add_event(self, e):
-        d = self.month.get_day(e.date)
+    def add_event(self, e, d=None):
+        if d==None:
+            d = self.month.get_day(e.date)
         for existing in d.events:
-            if existing.Dyna is None and not (e.end_time <= existing.start_time or e.start_time >= existing.end_time):
+            if not (e.end_time <= existing.start_time or e.start_time >= existing.end_time):
                 print("Event is overlapped.")
+                return False
         d.events.append(e)
         d.events.sort(key=lambda ev: ev.start_time)
         print("Event added.")
+        return True
 
     def create(self, title, date, start_time, end_time,des = "", duration=None,end_date = None, is_static=True):
         events = None
@@ -217,25 +219,28 @@ class Scheduler:
                     if slot_duration < 30:
                         continue
 
-                    ideal_block = min(random.choice([45, 60, 75, 90, 105, 120]), dur_left, slot_duration - 15)
-                    block_size = min(ideal_block, slot_duration)
+                    ideal_block = min(random.choice([45, 60, 75, 90, 105, 120]), dur_left)
+                    block_size = min(ideal_block, slot_duration -30)
                     if block_size <= 0:
                         continue
 
                     block_td = timedelta(minutes=block_size)
-                    end_time = start + block_td
+                    add = min((slot_duration -block_size) / 2 ,0) 
+                    add = timedelta(minutes=add)
+                    end_time = start + block_td+add
 
                     # Calculate the perfect middle of the slot
-                    mid_point = start + timedelta(minutes=(block_size // 2))
+  
 
                     # Create event with adjusted start time to be in the middle of the available slot
-                    e = Event(dyna.title, day, mid_point, end_time,"",dyna)
+                    e = Event(dyna.title, day, start+add, end_time,"",dyna)
                     sched.append(e)
+                    
 
+                    dur_left -= block_size
                     temp_day_events[day].append(e)
                     temp_day_events[day].sort(key=lambda x: x.start_time)
                     day_allocations[day] += block_size
-                    dur_left -= block_size
 
                     if dur_left <= 0:
                         break

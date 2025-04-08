@@ -21,6 +21,7 @@ class Event:
         self.description = description
         self.Dyna = Dyna
         self.duration = end_time - start_time
+        self.id=0
     def to_json(self):
         return {
             "title": self.title,
