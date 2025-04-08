@@ -236,38 +236,6 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	if useMockData {
-		if month != "" {
-			mockMonth := Month{
-				Days: []Day{
-					{Date: "01-" + month + "-2024"},
-					{Date: "02-" + month + "-2024"},
-				},
-				Objective: "Mock objective for month",
-			}
-			json.NewEncoder(w).Encode(mockMonth)
-			return
-		}
-
-		if day != "" {
-			mockDay := Day{
-				Events: []Event{
-					{
-						ID:          99,
-						Title:       "Mock Event for Day",
-						Date:        day,
-						StartTime:   "09:00",
-						EndTime:     "10:00",
-						Description: "Mocked event details",
-					},
-				},
-				Diary: "This is a mock diary entry.",
-			}
-			json.NewEncoder(w).Encode(mockDay)
-			return
-		}
-	}
-
 	// ---- REAL DATABASE HANDLING ----
 	if month != "" {
 		var objective string
@@ -335,6 +303,21 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(dayData)
 		return
 	}
+}
+func deleteAll(w http.ResponseWriter, r *http.Request){
+		if r.Method != http.MethodDelete {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		_, err := db.Exec("DELETE FROM task")
+		if err != nil {
+			http.Error(w, "Failed to clear data: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Println("Bruh bruh lmao delete ALLLLLLLL")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("All event data cleared."))
+		return
 }
 
 func deleteEvent(w http.ResponseWriter, r *http.Request) {
@@ -487,6 +470,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/",corsMiddleware(loggingMiddleware(handleRoot)))
 	mux.HandleFunc("/event", corsMiddleware(loggingMiddleware(eventRouter)))
+	mux.HandleFunc("/event/clear", corsMiddleware(loggingMiddleware(deleteAll)))
 	// Configure server
 	server := &http.Server{
 		Addr:    ":8080",

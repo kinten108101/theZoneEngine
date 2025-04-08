@@ -1,10 +1,9 @@
 GET /event/?(month | day)
 PUT /event/:id 
 DELETE /event/:id
-
-POST /event/{
-
-}
+DELETE /event/clear
+POST /event/
+http://localhost:8080/event/clear
 
 POST http://localhost:8080/event {
     "title": "Study Session",
