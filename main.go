@@ -16,7 +16,10 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 )
-
+const (
+	dateLayout = "2006-01-02"
+	timeLayout = "15:04"
+)
 type Event struct {
 	ID          int     `json:"id"`
 	Title       string  `json:"title"`
@@ -94,6 +97,36 @@ func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		next.ServeHTTP(w, r)
 	}
 }
+func validateEvent(e Event) error {
+	if e.EndDate != "" {
+		startDate, err := time.Parse(dateLayout, e.Date)
+		if err != nil {
+			return fmt.Errorf("invalid start date format: %v", err)
+		}
+		endDate, err := time.Parse(dateLayout, e.EndDate)
+		if err != nil {
+			return fmt.Errorf("invalid end date format: %v", err)
+		}
+		if endDate.Before(startDate) {
+			return fmt.Errorf("end date must be after start date")
+		}
+	}
+
+	if e.StartTime != "" && e.EndTime != "" {
+		startTime, err := time.Parse(timeLayout, e.StartTime)
+		if err != nil {
+			return fmt.Errorf("invalid start time format: %v", err)
+		}
+		endTime, err := time.Parse(timeLayout, e.EndTime)
+		if err != nil {
+			return fmt.Errorf("invalid end time format: %v", err)
+		}
+		if !endTime.After(startTime) {
+			return fmt.Errorf("End time must be after start time")
+		}
+	}
+	return nil
+}
 
 func createEvent(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -108,13 +141,17 @@ func createEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer r.Body.Close()
-
+	w.Header().Set("Content-Type", "application/json")
 	var e Event
 	if err := json.Unmarshal(body, &e); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 	fmt.Printf("Received event: %+v\n", e)
+	if err := validateEvent(e); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	jsonData, err := json.Marshal(e)
 	if err != nil {
 		http.Error(w, "Failed to marshal event", http.StatusInternalServerError)
@@ -157,7 +194,7 @@ func createEvent(w http.ResponseWriter, r *http.Request) {
 	// Log all the found JSON lines
 	log.Println("Found JSON lines from Python output:", jsonLines)
 
-	// Now you can process all valid JSON lines
+
 	var events []struct {
 		Title     string `json:"title"`
 		Date      string `json:"date"`
@@ -192,7 +229,6 @@ func createEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Write(response)
 }
 
