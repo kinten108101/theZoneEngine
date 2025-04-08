@@ -473,11 +473,11 @@ func main() {
 	mux.HandleFunc("/event/clear", corsMiddleware(loggingMiddleware(deleteAll)))
 	// Configure server
 	server := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":10000",
 		Handler: mux,
 	}
 
 	// Start server
-	log.Println("Server is running on http://localhost:8080")
+	log.Println("Server is running on http://localhost:10000")
 	log.Fatal(server.ListenAndServe())
 }
