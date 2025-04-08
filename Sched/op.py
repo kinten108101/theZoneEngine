@@ -2,11 +2,20 @@ from datetime import datetime
 from Scheduler import *
 from Time import *
 from helpfunc import *
-
+import subprocess
+import sys
 import argparse
 import json
 
+def install_requirements(requirements_file="requirements.txt"):
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", requirements_file])
+        print("✅ Requirements installed successfully.")
+    except subprocess.CalledProcessError as e:
+        print("❌ Failed to install requirements:", e)
+
 if __name__ == "__main__":
+    install_requirements("requirements.txt")
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str, required=True)
     args = parser.parse_args()
