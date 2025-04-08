@@ -15,7 +15,6 @@ if __name__ == "__main__":
         event = json.loads(args.data)
     except json.JSONDecodeError:
         print(json.dumps({"error": "Invalid JSON input"}))
-        return
 
     # Setup scheduler
     sleep_time = parse_time(normalize_time_input("9"))
