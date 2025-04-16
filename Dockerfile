@@ -1,28 +1,39 @@
-# First stage: build the Go binary
-FROM golang:1.22.9 AS builder
-
-
-# Set the working directory inside the container
-WORKDIR /app
-
-# Copy go files and download dependencies
-COPY go.mod ./
-COPY go.sum ./
-RUN go mod download
-
-# Copy the rest of the app code
-COPY . .
-
-# Build the Go binary
-RUN go build -o server
-
-# Use a minimal base image to run the binary
-FROM debian:bookworm-slim
-WORKDIR /app
-COPY --from=0 /app/server .
-
-# Set environment variable
-ENV PORT=8080
-
-# Run the server
-CMD ["./server"]
+# ---- BUILD GO BINARY ----
+    FROM golang:1.22.9 AS builder
+    WORKDIR /app
+    
+    COPY go.mod go.sum ./
+    RUN go mod download
+    
+    COPY . .
+    RUN go build -o server
+    
+    # ---- FINAL IMAGE ----
+    FROM debian:bookworm-slim
+    
+    # Install Python and venv
+    RUN apt-get update && apt-get install -y \
+      python3 \
+      python3-pip \
+      python3-venv \
+      && apt-get clean
+    
+    WORKDIR /app
+    
+    # Create virtual environment
+    RUN python3 -m venv /opt/venv
+    
+    # Use venv's pip to install requirements
+    ENV PATH="/opt/venv/bin:$PATH"
+    # Copy Python dependencies first
+    COPY Sched/requirements.txt ./requirements.txt
+    RUN pip install --no-cache-dir -r ./requirements.txt
+    
+    # Copy Go binary and your Python script
+    COPY --from=builder /app/server .
+    COPY . .
+    
+    ENV PORT=8080
+    
+    CMD ["./server"]
+    

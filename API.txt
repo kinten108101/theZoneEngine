@@ -26,3 +26,13 @@ POST http://localhost:8080/event {
 GET http://localhost:8080/event?day=2025-04-07
 
 DELETE http://localhost:8080/event?id=113
+
+
+
+
+UI: 
+con1: param1
+con2: param2
+con3: param3
+
+def gay(param1, param2, param3=....)
