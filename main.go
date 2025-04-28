@@ -466,35 +466,45 @@ func eventRouter(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 	}
 }
-func randomTime() string {
-	// Generate random hour (8:00 AM to 5:00 PM)
-	hour := rand.Intn(10) + 8 // Hour between 8 and 17
-	minute := rand.Intn(60)   // Minute between 0 and 59
 
-	// Format time as "HH:MM AM/PM"
-	t := time.Date(2025, time.May, 1, hour, minute, 0, 0, time.Local)
-	return t.Format("03:04 PM")
+
+
+
+func main() {
+	initDB()
+	defer func() {
+		if db != nil {
+			db.Close()
+		}
+	}()
+
+	// Register routes with middleware
+	mux := http.NewServeMux()
+	mux.HandleFunc("/",corsMiddleware(loggingMiddleware(handleRoot)))
+	mux.HandleFunc("/event", corsMiddleware(loggingMiddleware(eventRouter)))
+	mux.HandleFunc("/event/clear", corsMiddleware(loggingMiddleware(deleteAll)))
+	mux.HandleFunc("/mock",corsMiddleware(loggingMiddleware(useMock)))
+	mux.HandleFunc("/mock-add",corsMiddleware(loggingMiddleware(addMock)))
+	// Configure server
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: mux,
+	}
+
+	// Start server
+	log.Println("Server is running on http://localhost:8080")
+	log.Fatal(server.ListenAndServe())
 }
 
-// Calculate end time based on start time and random duration
-func calculateEndTime(startTime string, duration float32) string {
-	// Parse start time
-	start, _ := time.Parse("03:04 PM", startTime)
 
-	// Add duration (convert to hours and minutes)
-	durationInMinutes := int(duration * 60)
-	endTime := start.Add(time.Duration(durationInMinutes) * time.Minute)
+var globalEvents []Event
 
-	// Format end time as "HH:MM AM/PM"
-	return endTime.Format("03:04 PM")
-}
-
+// ===== useMock handler =====
 func useMock(w http.ResponseWriter, r *http.Request) {
 	eventTitles := []string{
 		"Team Meeting", "Client Meeting", "Code Review", "Brainstorming Session", "Development Work",
 		"Feature Demo", "Task Assignment", "Sprint Planning", "Code Debugging", "Documentation Work",
 	}
-
 	eventDescriptions := []string{
 		"Discuss project milestones and progress", "Review pull requests and improvements", "Work on new feature implementation",
 		"Brainstorm ideas for the next sprint", "Update project documentation and diagrams", "Demo new feature to the team",
@@ -518,14 +528,14 @@ func useMock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate 30 events
-	var events []Event
+	// Reset the global event list before adding new events
+	globalEvents = []Event{}
 	eventID := 1
 	for current := start; !current.After(end); current = current.AddDate(0, 0, 1) {
-		for i := 0; i < 2; i++ { // Two events per day for simplicity
-			// Random start time and duration
-			startTime := randomTime()
-			duration := float32(rand.Intn(3)+1) // Random duration between 1 and 3 hours
+		startTime := randomTime()
+		for i := 0; i < rand.Intn(3)+2; i++ { 
+			startTime = calculateEndTime(startTime, float32(rand.Intn(2))+0.5)
+			duration := float32(rand.Intn(3) + 1) // 1–3 hours duration
 
 			event := Event{
 				ID:          eventID,
@@ -534,41 +544,17 @@ func useMock(w http.ResponseWriter, r *http.Request) {
 				StartTime:   startTime,
 				EndTime:     calculateEndTime(startTime, duration),
 				Description: eventDescriptions[rand.Intn(len(eventDescriptions))],
-				Dyna:        rand.Intn(2), // Random Dyna value (0 or 1)
+				Dyna:        rand.Intn(2)+1,
 				Duration:    duration,
 			}
-			events = append(events, event)
+			startTime = calculateEndTime(startTime,duration)
+			globalEvents = append(globalEvents, event)
 			eventID++
 		}
 	}
 
-	// Generate mock day data with events
-	var days []Day
-	for i := 0; i < len(events); i++ {
-		// Check if the date already exists in days, if not, create it
-		date := events[i].Date
-		var day Day
-		dayFound := false
-		for j := range days {
-			if days[j].Date == date {
-				day = days[j]
-				dayFound = true
-				break
-			}
-		}
-
-		// Add event to the day
-		if !dayFound {
-			day = Day{
-				Date:   date,
-				Events: []Event{events[i]},
-				Diary:  "Productive day working on tasks and collaborating with the team.",
-			}
-			days = append(days, day)
-		} else {
-			day.Events = append(day.Events, events[i])
-		}
-	}
+	// Group events by day
+	days := groupEventsByDay(globalEvents)
 
 	// Convert to JSON
 	response, err := json.Marshal(days)
@@ -577,33 +563,62 @@ func useMock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set the content type and send the response
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(response)
 }
 
-
-func main() {
-	initDB()
-	defer func() {
-		if db != nil {
-			db.Close()
-		}
-	}()
-
-	// Register routes with middleware
-	mux := http.NewServeMux()
-	mux.HandleFunc("/",corsMiddleware(loggingMiddleware(handleRoot)))
-	mux.HandleFunc("/event", corsMiddleware(loggingMiddleware(eventRouter)))
-	mux.HandleFunc("/event/clear", corsMiddleware(loggingMiddleware(deleteAll)))
-	mux.HandleFunc("/mock",corsMiddleware(loggingMiddleware(useMock)))
-	// Configure server
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: mux,
+// ===== helper function to group events =====
+func groupEventsByDay(events []Event) []Day {
+	dayMap := make(map[string][]Event)
+	for _, e := range events {
+		dayMap[e.Date] = append(dayMap[e.Date], e)
 	}
 
-	// Start server
-	log.Println("Server is running on http://localhost:8080")
-	log.Fatal(server.ListenAndServe())
+	var days []Day
+	for date, events := range dayMap {
+		days = append(days, Day{
+			Date:   date,
+			Events: events,
+			Diary:  "Productive day working on tasks and collaborating with the team.",
+		})
+	}
+	return days
+}
+
+// ===== randomTime and calculateEndTime (you already have) =====
+func randomTime() string {
+	hour := rand.Intn(2) + 8 // Random hour between 8 AM and 4 PM
+	minute := rand.Intn(4) * 15
+	return formatTime(hour, minute)
+}
+
+func calculateEndTime(start string, duration float32) string {
+	t, _ := time.Parse("15:04", start)
+	end := t.Add(time.Duration(duration*60) * time.Minute)
+	return end.Format("15:04")
+}
+
+func formatTime(hour, minute int) string {
+	return fmt.Sprintf("%02d:%02d", hour, minute)
+}
+
+func addMock(w http.ResponseWriter, r *http.Request) {
+	// Create a dummy new event
+	newEvent := Event{
+		ID:          len(globalEvents) + 1,
+		Title:       "Group Meeting",
+		Date:        "2025-04-28",
+		StartTime:   "21:00",
+		EndTime:     "22:00",
+		Description: "Meeting to discuss important project updates",
+		Dyna:        1,
+		Duration:    1.0,
+	}
+
+	// Append to global events
+	globalEvents = append(globalEvents, newEvent)
+
+	// Respond with the whole updated globalEvents list
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(globalEvents)
 }
