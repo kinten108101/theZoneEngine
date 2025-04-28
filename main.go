@@ -269,9 +269,7 @@ func readEvents(w http.ResponseWriter, r *http.Request) {
 		}
 		json.NewEncoder(w).Encode(monthData)
 		return
-	}
-
-	if day != "" {
+	}else if day != "" {
 		day, err := time.Parse("2006-01-02", day)
 		var diary string
 		_ = db.QueryRow("SELECT diary FROM days WHERE dt = ?", day).Scan(&diary)
@@ -433,14 +431,24 @@ func updateEvent(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func handleRoot(response http.ResponseWriter, request *http.Request)() {
+func handleRoot(w http.ResponseWriter, r *http.Request)() {
 	output, err := php.Exec("health.php")
 	if err != nil {
 		log.Println("Health check failed: %v\nOutput: %s", err, output)
 	} else {
 	log.Println("I dont know what does it do, but it works:", string(output))
 	}
-	fmt.Fprintf(response, output)
+	fmt.Fprintf(w, output)
+
+	today := time.Now()
+    day := today.Day()
+
+    q := r.URL.Query()
+    q.Set("day", fmt.Sprintf("%d", day))
+    r.URL.RawQuery = q.Encode()
+
+    readEvents(w, r)
+
 }
 
 func eventRouter(w http.ResponseWriter, r *http.Request) {
