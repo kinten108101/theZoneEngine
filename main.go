@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 	"net/http"
+	"math/rand"
 	"os"
 	"bytes"
 	"strings"
@@ -465,6 +466,122 @@ func eventRouter(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 	}
 }
+func randomTime() string {
+	// Generate random hour (8:00 AM to 5:00 PM)
+	hour := rand.Intn(10) + 8 // Hour between 8 and 17
+	minute := rand.Intn(60)   // Minute between 0 and 59
+
+	// Format time as "HH:MM AM/PM"
+	t := time.Date(2025, time.May, 1, hour, minute, 0, 0, time.Local)
+	return t.Format("03:04 PM")
+}
+
+// Calculate end time based on start time and random duration
+func calculateEndTime(startTime string, duration float32) string {
+	// Parse start time
+	start, _ := time.Parse("03:04 PM", startTime)
+
+	// Add duration (convert to hours and minutes)
+	durationInMinutes := int(duration * 60)
+	endTime := start.Add(time.Duration(durationInMinutes) * time.Minute)
+
+	// Format end time as "HH:MM AM/PM"
+	return endTime.Format("03:04 PM")
+}
+
+func useMock(w http.ResponseWriter, r *http.Request) {
+	eventTitles := []string{
+		"Team Meeting", "Client Meeting", "Code Review", "Brainstorming Session", "Development Work",
+		"Feature Demo", "Task Assignment", "Sprint Planning", "Code Debugging", "Documentation Work",
+	}
+
+	eventDescriptions := []string{
+		"Discuss project milestones and progress", "Review pull requests and improvements", "Work on new feature implementation",
+		"Brainstorm ideas for the next sprint", "Update project documentation and diagrams", "Demo new feature to the team",
+		"Assign tasks for the next sprint", "Debug and test the newly implemented features", "Plan tasks for the next phase",
+		"Casual lunch and networking",
+	}
+
+	// Define the date range (27th April to 7th June)
+	startDate := "2025-04-27"
+	endDate := "2025-06-07"
+
+	// Parse the start and end dates
+	start, err := time.Parse("2006-01-02", startDate)
+	if err != nil {
+		http.Error(w, "Failed to parse start date", http.StatusInternalServerError)
+		return
+	}
+	end, err := time.Parse("2006-01-02", endDate)
+	if err != nil {
+		http.Error(w, "Failed to parse end date", http.StatusInternalServerError)
+		return
+	}
+
+	// Generate 30 events
+	var events []Event
+	eventID := 1
+	for current := start; !current.After(end); current = current.AddDate(0, 0, 1) {
+		for i := 0; i < 2; i++ { // Two events per day for simplicity
+			// Random start time and duration
+			startTime := randomTime()
+			duration := float32(rand.Intn(3)+1) // Random duration between 1 and 3 hours
+
+			event := Event{
+				ID:          eventID,
+				Title:       eventTitles[rand.Intn(len(eventTitles))],
+				Date:        current.Format("2006-01-02"),
+				StartTime:   startTime,
+				EndTime:     calculateEndTime(startTime, duration),
+				Description: eventDescriptions[rand.Intn(len(eventDescriptions))],
+				Dyna:        rand.Intn(2), // Random Dyna value (0 or 1)
+				Duration:    duration,
+			}
+			events = append(events, event)
+			eventID++
+		}
+	}
+
+	// Generate mock day data with events
+	var days []Day
+	for i := 0; i < len(events); i++ {
+		// Check if the date already exists in days, if not, create it
+		date := events[i].Date
+		var day Day
+		dayFound := false
+		for j := range days {
+			if days[j].Date == date {
+				day = days[j]
+				dayFound = true
+				break
+			}
+		}
+
+		// Add event to the day
+		if !dayFound {
+			day = Day{
+				Date:   date,
+				Events: []Event{events[i]},
+				Diary:  "Productive day working on tasks and collaborating with the team.",
+			}
+			days = append(days, day)
+		} else {
+			day.Events = append(day.Events, events[i])
+		}
+	}
+
+	// Convert to JSON
+	response, err := json.Marshal(days)
+	if err != nil {
+		http.Error(w, "Failed to generate mock data", http.StatusInternalServerError)
+		return
+	}
+
+	// Set the content type and send the response
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(response)
+}
+
 
 func main() {
 	initDB()
@@ -479,6 +596,7 @@ func main() {
 	mux.HandleFunc("/",corsMiddleware(loggingMiddleware(handleRoot)))
 	mux.HandleFunc("/event", corsMiddleware(loggingMiddleware(eventRouter)))
 	mux.HandleFunc("/event/clear", corsMiddleware(loggingMiddleware(deleteAll)))
+	mux.HandleFunc("/mock",corsMiddleware(loggingMiddleware(useMock)))
 	// Configure server
 	server := &http.Server{
 		Addr:    ":8080",
